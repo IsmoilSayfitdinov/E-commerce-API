@@ -1,15 +1,18 @@
 from django.shortcuts import render
 from rest_framework import generics
 from admins.serializers import ProductsAddSerializers
-from .serializers import CartAddSerializers, CartAddListSerializers, CheckoutSerializer
+from .serializers import AddToCartSerializers, CheckoutSerializers, OrderSerializers, OrderItemSerializers, CartSerializers, CartItemSerializers
 from admins.models import ProductsModel
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from admins.views import CustomPagination
 from django.shortcuts import get_object_or_404
-from .models import CartModel, CheackoutModel, NEW
+from .models import CartModel, Order, NEW, CartItem, OrderItem
 from rest_framework.views import APIView
 from rest_framework import status
+from django.contrib.auth.models import AnonymousUser
+
+
 # Create your views here.
 class ProductsViewListApi(generics.ListAPIView):
    serializer_class = ProductsAddSerializers
@@ -42,89 +45,84 @@ class ProductsSearchApi(generics.ListAPIView):
         return queryset
     
     
-
-
-class CartItemCreateAPIView(generics.CreateAPIView):
-    queryset = CartModel.objects.all()
-    serializer_class = CartAddSerializers
-
-    def post(self, request, *args, **kwargs):
-        serializer = self.get_serializer(data=request.data)
-        if serializer.is_valid():
-            serializer.save(user=request.user)
-            return Response(serializer.data, status=201)
-        return Response(serializer.errors, status=400)
-
-class CartViewList(generics.ListAPIView):
-    serializer_class = CartAddListSerializers
+class CartListApiView(generics.ListAPIView):
+    serializer_class = CartSerializers
     permission_classes = [IsAuthenticated]
-
+    
     def get_queryset(self):
         return CartModel.objects.filter(user=self.request.user)
- 
- 
-class CheckoutView(APIView):
-    def post(self, request, pk):
-        print(request.data)
-        cart = get_object_or_404(ProductsModel, id=pk)
-       
-        phone = request.data.get('phone_number')
-        addres = request.data.get('address')
-        
-        order = CheackoutModel.objects.create(
-            product = cart,
-            user=request.user,
-            phone_number=phone,
-            address=addres,
-            status=NEW
-        )
-
- 
-        serializers = CheckoutSerializer(order)
-
-        return Response(serializers.data)
- 
- 
-
     
-class ListallOrder(generics.ListAPIView):
-    serializer_class = CheckoutSerializer
-    pagination_class = CustomPagination
+class AddToCartAPIView(APIView):
     permission_classes = [IsAuthenticated]
+    
+    def post(self, request):
+        serializer  = AddToCartSerializers(data=request.data)
+        if serializer.is_valid():
+            product_id = serializer.validated_data.get('product_id')
+            quantity = serializer.validated_data.get('quantity')
+            
+            product = ProductsModel.objects.get(id=product_id)
+            cart, created = CartModel.objects.get_or_create(user=request.user)
+            cart_item, created = CartItem.objects.get_or_create(cart=cart, product=product)
+            cart_item.quantity += quantity
+            cart_item.save()
+            return Response({"message": "Product added to cart successfully."}, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+class CartCheckoutAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+    
+    def post(self, request, pk):
+        serializers = CheckoutSerializers(data=request.data)
+        if serializers.is_valid():
+            try:
+                cart = CartModel.objects.get(id=pk, user=request.user)
+            except:
+                return Response({"message": "Cart not found."}, status=status.HTTP_404_NOT_FOUND)
+            phone_number = serializers.validated_data.get('phone_number')
+            address = serializers.validated_data.get('address')
+            total_price = sum(item.product.price * item.quantity for item in cart.items.all())
+            order = Order.objects.create(user=request.user, phone_number=phone_number, address=address, total_price=total_price)
+            for item in cart.items.all():
+                OrderItem.objects.create(order=order, product=item.product, quantity=item.quantity, price=item.product.price * item.quantity)
+            
+            return Response({"message": "Order created successfully."}, status=status.HTTP_201_CREATED)
+        return Response(serializers.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+class OrderListAPIView(generics.ListAPIView):
+    serializer_class = OrderSerializers
+    permission_classes = [IsAuthenticated]
+    
     def get_queryset(self):
-        return CheackoutModel.objects.filter(user=self.request.user)
+        return Order.objects.filter(user=self.request.user)
+        
+
     
-    
-class CartItemPlusView(generics.UpdateAPIView):
-    queryset = CartModel.objects.all()
-    serializer_class = CartAddSerializers
+class CartPlusProductAPIView(APIView):
+    def post(self, request, pk, *args, **kwargs):
+        cart = get_object_or_404(CartModel, user=request.user)
+        cart_item = get_object_or_404(CartItem, cart=cart, product__id=pk)
+        cart_item.quantity += 1
+        cart_item.save()
+        serializer = CartItemSerializers(cart_item)
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
-    def update(self, request, *args, **kwargs):
-        instance = self.get_object()
-        instance.quantity += 1
-        instance.save()
-        return Response({"message": "Product quantity increased successfully."}, status=status.HTTP_200_OK)
-
-
-class CartItemMinusView(generics.UpdateAPIView):
-    queryset = CartModel.objects.all()
-    serializer_class = CartAddSerializers
-
-    def update(self, request, *args, **kwargs):
-        instance = self.get_object()
-        if instance.quantity > 1:
-            instance.quantity -= 1
-            instance.save()
-            return Response({"message": "Product quantity decreased successfully."}, status=status.HTTP_200_OK)
+class CartMinusProductAPIView(APIView):
+    def post(self, request, pk, *args, **kwargs):
+        cart = get_object_or_404(CartModel, user=request.user)
+        cart_item = get_object_or_404(CartItem, cart=cart, product__id=pk)
+        if cart_item.quantity > 1:
+            cart_item.quantity -= 1
+            cart_item.save()
+            serializer = CartItemSerializers(cart_item)
+            return Response(serializer.data, status=status.HTTP_200_OK)
         else:
-            instance.delete()
-            return Response({"message": "Product removed from cart because it reached minimum quantity."}, status=status.HTTP_204_NO_CONTENT)
+            cart_item.delete()
+            return Response({'detail': 'Product removed from cart.'}, status=status.HTTP_204_NO_CONTENT)
 
-
-class CartItemRemoveView(generics.DestroyAPIView):
-    queryset = CartModel.objects.all()
-
-    def destroy(self, request, *args, **kwargs):
-        instance = self.get_object()
-        instance.delete()
-        return Response({"message": "Product removed from cart successfully."}, status=status.HTTP_204_NO_CONTENT)
+class CartRemoveProductAPIView(APIView):
+    def post(self, request, pk, *args, **kwargs):
+        cart = get_object_or_404(CartModel, user=request.user)
+        cart_item = get_object_or_404(CartItem, cart=cart, product__id=pk)
+        cart_item.delete()
+        return Response({'detail': 'Product removed from cart.'}, status=status.HTTP_204_NO_CONTENT)

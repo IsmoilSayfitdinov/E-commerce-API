@@ -3,8 +3,8 @@ from django.contrib.auth.models import AbstractUser
 from shared.models import BaseModel
 import uuid
 import random
-from rest_framework_simplejwt.tokens import RefreshToken
 from django.utils import timezone
+from rest_framework_simplejwt.tokens import RefreshToken
 
 NEW, VERIFIED, DONE = "NEW", "VERIFIED", "DONE"
 USER, ADMIN, SUPERUSER = "USER", "ADMIN", "SUPERUSER"

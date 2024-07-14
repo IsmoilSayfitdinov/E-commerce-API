@@ -8,8 +8,8 @@ from .serializers import ProductsAddSerializers, OrderStatusUdpateSerializers
 from rest_framework import generics, pagination
 from users.models import UserModel
 from users.serializer import UserUpdateSerializer
-from shopping.serializers import CheckoutSerializer
-from shopping.models import CheackoutModel, ACCEPTED
+from shopping.serializers import OrderSerializers
+from shopping.models import Order, ACCEPTED, CartModel, OrderItem
 
 class ProductsAddView(APIView):
     permission_classes = [IsAdminUser]
@@ -99,50 +99,40 @@ class UserListView(generics.ListAPIView):
     
     
     
-class UserListDetailApiView(generics.ListAPIView):
+class UserListDetailApiView(generics.RetrieveAPIView):
     serializer_class = UserUpdateSerializer
     queryset = UserModel.objects.all()
     permission_classes = [IsAdminUser]
     pagination_class = CustomPagination
-    
-    def get(self, request, *args, **kwargs):
-        instance = self.get_object()
-        serializer = self.get_serializer(instance)
-        return Response(serializer.data)
+
 
 class ListOneUserOrders(generics.ListAPIView):
-    serializer_class = CheckoutSerializer
+    serializer_class = OrderSerializers
     permission_classes = [IsAdminUser]
     pagination_class = CustomPagination
 
     def get_queryset(self):
-        user = self.request.user 
-        product_pk = self.kwargs['pk']
-
-        queryset = CheackoutModel.objects.filter(user=user, product=product_pk)
-        return queryset
+        user_id = self.kwargs['pk']
+        return Order.objects.filter(user_id=user_id)
     
 class ViewAllOrders(generics.ListAPIView):
-    serializer_class = CheckoutSerializer
+    serializer_class = OrderSerializers
     permission_classes = [IsAdminUser]
-    queryset = CheackoutModel.objects.all()
+    queryset = Order.objects.all()
     
     
 class UserOrderUpdateView(generics.UpdateAPIView):
     serializer_class = OrderStatusUdpateSerializers
     permission_classes = [IsAdminUser]
-    queryset = CheackoutModel.objects.all()
+    queryset = Order.objects.all()
     
-
-    def put(self, request, pk,*args, **kwargs):
-        checkout = CheackoutModel.objects.filter(user=request.user, pk=pk)
-        
-        if checkout:
-            checkout.update(status=ACCEPTED)
-            res = {
-                "status": True,
-                "message": "Accepted"
-            }
-            return Response(res,status=status.HTTP_200_OK)
+    def put(self, request, *args, **kwargs):
+        instance = self.get_object()
+        serializers = self.get_serializer(instance, data=request.data)
+        if serializers.is_valid():
+            serializers.save()
+            return Response(serializers.data)
         else:
-            return Response(status=status.HTTP_404_NOT_FOUND)
+            return Response(serializers.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    

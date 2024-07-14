@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from .models import ProductsModel
-from shopping.models import CheackoutModel
+from shopping.models import Order
 class ProductsAddSerializers(serializers.ModelSerializer):
     class Meta:
         model = ProductsModel
@@ -11,7 +11,7 @@ class OrderStatusUdpateSerializers(serializers.ModelSerializer):
     ACCEPTED = 'ACCEPTED'
 
     class Meta:
-        model = CheackoutModel
+        model = Order
         fields = ('status',) 
 
     def update(self, instance, validated_data):
