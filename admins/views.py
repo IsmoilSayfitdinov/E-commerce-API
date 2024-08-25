@@ -1,6 +1,6 @@
 from django.shortcuts import render
 from rest_framework.views import APIView
-from rest_framework.permissions import IsAdminUser
+from rest_framework.permissions import IsAdminUser, AllowAny
 from rest_framework.response import Response
 from rest_framework import status
 from .models import ProductsModel
@@ -29,7 +29,7 @@ class ProductsAddView(APIView):
     
     
 class ProductsUpdateView(generics.UpdateAPIView):
-    permission_classes = [IsAdminUser]
+    permission_classes = [AllowAny]
     serializer_class = ProductsAddSerializers
     queryset = ProductsModel.objects.all()
     
@@ -75,7 +75,7 @@ class ProductsDelete(generics.DestroyAPIView):
         return Response(response, status=status.HTTP_200_OK)
     
 
-class ProductsDetailView(generics.ListAPIView):
+class ProductsAdminDetailView(generics.ListAPIView):
     serializer_class = ProductsAddSerializers
     queryset = ProductsModel.objects.all()
     permission_classes = [IsAdminUser]
@@ -135,4 +135,3 @@ class UserOrderUpdateView(generics.UpdateAPIView):
         else:
             return Response(serializers.errors, status=status.HTTP_400_BAD_REQUEST)
 
-    

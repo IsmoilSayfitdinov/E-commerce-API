@@ -1,6 +1,6 @@
 from django.shortcuts import render
 from rest_framework import generics
-from .serializer import UserRegistrationSerializer, LoginSerializer, UserForgetPasswordForemailSerializer, UserResetPasswordSerializer, UserUpdateSerializer
+from .serializer import Userserializers, UserRegistrationSerializer, LoginSerializer, UserForgetPasswordForemailSerializer, UserResetPasswordSerializer, UserUpdateSerializer
 from .models import UserModel, NEW, UserCodeModel, VERIFIED
 from rest_framework.permissions import AllowAny, IsAuthenticated, IsAdminUser
 from rest_framework.views import APIView
@@ -171,3 +171,23 @@ class UserUpdateView(generics.UpdateAPIView):
 
     def get_object(self):
         return self.request.user
+    
+    
+class UserdetailView(generics.RetrieveAPIView):
+    serializer_class = Userserializers
+    permission_classes = [IsAuthenticated]
+    queryset = UserModel.objects.all()
+    def get_object(self):
+        return self.request.user
+
+class UserLogoutView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        try:
+            refresh_token = request.data["refresh_token"]
+            token = RefreshToken(refresh_token)
+            token.blacklist()
+            return Response(status=status.HTTP_205_RESET_CONTENT)
+        except Exception as e:
+            return Response(status=status.HTTP_400_BAD_REQUEST)

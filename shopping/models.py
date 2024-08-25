@@ -3,6 +3,8 @@ from shared.models import BaseModel
 from admins.models import ProductsModel
 from users.models import UserModel
 
+
+    
 class CartModel(BaseModel):
     user = models.ForeignKey(UserModel, on_delete=models.CASCADE)
     

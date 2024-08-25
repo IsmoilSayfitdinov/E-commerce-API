@@ -8,6 +8,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 
 NEW, VERIFIED, DONE = "NEW", "VERIFIED", "DONE"
 USER, ADMIN, SUPERUSER = "USER", "ADMIN", "SUPERUSER"
+
 class UserModel(AbstractUser, BaseModel):
     AUHT_STATUS = (
         (NEW, NEW),
@@ -23,7 +24,7 @@ class UserModel(AbstractUser, BaseModel):
 
     auth_status = models.CharField(max_length=10, choices=AUHT_STATUS, default=NEW)
     user_role = models.CharField(max_length=10, choices=USER_ROLE, default=USER)
-    
+    avatar = models.ImageField(upload_to="avatars/", null=True, blank=True)
     first_name = models.CharField(max_length=255) 
     last_name = models.CharField(max_length=255)
     username = models.CharField(max_length=255, unique=True)

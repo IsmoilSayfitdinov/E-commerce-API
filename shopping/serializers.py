@@ -9,10 +9,17 @@ class UserSerializer(serializers.ModelSerializer):
         fields = ['uuid', 'username']
 
 class ProductsSerializers(serializers.ModelSerializer):
+    
+    category_names = serializers.SerializerMethodField()
+    componiya_name = serializers.SerializerMethodField()
     class Meta:
         model = ProductsModel
-        fields = ['id', 'name', 'description', 'price', 'photo']
+        fields = ['id', 'name', 'description', 'price', 'photo', "category_names", "componiya_name"]
 
+    def get_category_names(self, obj):
+        return obj.category.name
+    def get_componiya_name(self, obj):
+        return [componiya.name for componiya in obj.camponeya_names.all()]
 
 class CartItemSerializers(serializers.ModelSerializer):
     product = ProductsSerializers()
@@ -46,3 +53,4 @@ class OrderSerializers(serializers.ModelSerializer):
     class Meta:
         model = Order
         fields = ['id', 'items', 'phone_number', 'address', 'status', "total_price"]
+        

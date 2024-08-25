@@ -10,4 +10,5 @@ urlpatterns = [
     path("password/forget/", views.UserForgetPasswordToEmail.as_view()),
     path("password/update/", views.UserResetPasswordView.as_view()),
     path("update/", views.UserUpdateView.as_view()),
+    path("me/", views.UserdetailView.as_view()),
 ]

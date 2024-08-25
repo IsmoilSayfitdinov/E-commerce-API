@@ -1,39 +1,35 @@
 from django.shortcuts import render
 from rest_framework import generics
-from admins.serializers import ProductsAddSerializers
-from .serializers import AddToCartSerializers, CheckoutSerializers, OrderSerializers, OrderItemSerializers, CartSerializers, CartItemSerializers
-from admins.models import ProductsModel
-from rest_framework.permissions import IsAuthenticated
+from admins.serializers import ProductsViewSerializers, TagsSerializers, ComponeyNamesSerializers, SubCategorySerializer, CategorySerializer
+from .serializers import AddToCartSerializers, CheckoutSerializers, ProductsSerializers,OrderSerializers, OrderItemSerializers, CartSerializers, CartItemSerializers
+from admins.models import ProductsModel, Category, Tags, CamponeyaNames, Subcategory
+from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import Response
 from admins.views import CustomPagination
 from django.shortcuts import get_object_or_404
 from .models import CartModel, Order, NEW, CartItem, OrderItem
 from rest_framework.views import APIView
 from rest_framework import status
-from django.contrib.auth.models import AnonymousUser
-
-
+from rest_framework.filters import OrderingFilter
+from django_filters.rest_framework import DjangoFilterBackend
 # Create your views here.
 class ProductsViewListApi(generics.ListAPIView):
-   serializer_class = ProductsAddSerializers
+   serializer_class = ProductsViewSerializers
+   queryset = ProductsModel.objects.all()
+   filter_backends = [DjangoFilterBackend, OrderingFilter]
+   filterset_fields = ['category', 'subcategory']
+   ordering_fields = ['name', 'price']
+  
+   
+class ProductsViewDetailApi(generics.RetrieveAPIView):
+   serializer_class = ProductsViewSerializers
    queryset = ProductsModel.objects.all()
    permission_classes = [IsAuthenticated]
    
-   
-   
-class ProductsViewDetailApi(generics.ListAPIView):
-   serializer_class = ProductsAddSerializers
-   queryset = ProductsModel.objects.all()
-   permission_classes = [IsAuthenticated]
-   
-   def get(self, request, *args, **kwargs):
-       instance = self.get_object()
-       serializers = self.get_serializer(instance)
-       return Response(serializers.data)
    
    
 class ProductsSearchApi(generics.ListAPIView):
-    serializer_class = ProductsAddSerializers
+    serializer_class = ProductsViewSerializers
     permission_classes = [IsAuthenticated]
     pagination_class = CustomPagination
     
@@ -126,3 +122,32 @@ class CartRemoveProductAPIView(APIView):
         cart_item = get_object_or_404(CartItem, cart=cart, product__id=pk)
         cart_item.delete()
         return Response({'detail': 'Product removed from cart.'}, status=status.HTTP_204_NO_CONTENT)
+
+class TagsView(generics.ListAPIView):
+    serializer_class = TagsSerializers
+    queryset = Tags.objects.all()
+    permission_classes = [AllowAny]
+    
+class CompaneyNamesView(generics.ListAPIView):
+    serializer_class = ComponeyNamesSerializers
+    queryset = CamponeyaNames.objects.all()
+    permission_classes = [AllowAny]
+
+
+class CategoryListView(generics.ListAPIView):
+    queryset = Category.objects.all()
+    serializer_class = CategorySerializer
+    permission_classes = [AllowAny]
+    
+
+class CategoryDetailList(generics.RetrieveAPIView):
+    queryset = Category.objects.all()
+    serializer_class = CategorySerializer
+    permission_classes = [AllowAny]
+
+
+
+class SubCategoryListView(generics.ListCreateAPIView):
+    queryset = Subcategory.objects.all()
+    serializer_class = SubCategorySerializer
+

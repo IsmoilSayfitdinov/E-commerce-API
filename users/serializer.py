@@ -9,6 +9,12 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from django.contrib.auth.password_validation import validate_password
 
 
+class Userserializers(serializers.ModelSerializer):
+    class Meta:
+        model = UserModel
+        fields = ["id","username", "is_staff", "is_superuser", "avatar"]
+
+
 class UserRegistrationSerializer(serializers.ModelSerializer):
     confirm_password = serializers.CharField(write_only=True)
     uuid = serializers.IntegerField(read_only=True)
